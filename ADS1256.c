@@ -248,38 +248,6 @@ UDOUBLE ADS1256_Faster_Read_ADC_Data(void) // was static
     return read;
 }
 
-unsigned long long int write_SPI_bits(unsigned long long int send_value, int bits) {
-    unsigned long long int return_value = 0;
-    unsigned long long int bitmask = pow(2, (bits - 1));
-    int i;
-    for (i = 0; i < bits; i++) {
-        return_value <<= 1;
-        digitalWrite(CLK, LOW);
-        digitalWrite(CLK, LOW);
-        digitalWrite(CLK, LOW);
-        if (send_value & bitmask) {
-            digitalWrite(MOSI, HIGH);
-            digitalWrite(MOSI, HIGH);
-            digitalWrite(MOSI, HIGH);
-        }
-        else {
-            digitalWrite(MOSI, LOW);
-            digitalWrite(MOSI, LOW);
-            digitalWrite(MOSI, LOW);
-        }
-        if (digitalRead(MISO) == HIGH) {
-            return_value += 1;
-        }
-        digitalWrite(CLK, HIGH);
-        digitalWrite(CLK, HIGH); //clock was too fast
-        digitalWrite(CLK, HIGH); //clock was too fast
-        send_value <<= 1;
-    }
-    usleep(2);
-    return return_value;
-}
-
-
 /******************************************************************************
 function:  Set the channel to be read
 parameter: 
