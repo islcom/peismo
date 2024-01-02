@@ -1,19 +1,19 @@
 # Ignore compiled files
-*.class
 *.o
-*.pyc
 
 # Ignore temporary files
 *~
 *.save*
 
-# Ignore IDE-specific files
-.idea/
-.vscode/
-
 # Ignore configuration files containing sensitive information
-config.ini
 ftpconfig.ini
+!ftpconfig.ini.template
 
-#ignore data folder
+#ignore folders
 data
+html
+mseed
+uploaded
+
+#ignore logs
+*.log

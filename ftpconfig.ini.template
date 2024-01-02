@@ -1,0 +1,11 @@
+# FTP Network Configuration not working
+[ftp]
+# SFTP Network Configuration
+[sftp]
+username=colin
+password=5ectret5quirrell
+server=0.0.0.0
+path=/var/ftp/incoming/eqlogger/in
+[miniseed]
+stationname=AU_NAME_0_HHZ
+mseedsuffix=_NAME

@@ -9,15 +9,18 @@
 
 #include "ADS1256.h"
 
-#define ADS1256_TIME_OFFSET 725
 #define FILE_BUFFER_LENGTH 120000 // 60 x sps needed for a minute, 120 x sps allows for arbitrary start and finish on minute with no files less than a minute
 #define FULLSCALE 16777216
-#define MAX_READINGS_PER_SAMPLE 100
+#define MAX_READINGS_PER_SAMPLE 1000
+#define MAX_LINE_LENGTH 255
 
-int SPS = 0;
-int SPS_DEFAULT = 200;
-int DISPLAY_GAIN = 0;
-int DISPLAY_GAIN_DEFAULT = 10000;
+typedef struct Config{
+    unsigned sps;
+    int adc_time_offset;
+    unsigned display_gain;
+    float c1, c2, c3, c4, c5;
+} Config;
+Config config;
 int TERMINAL_WIDTH = 0;
 
 int verbose = 0; // not used yet
@@ -27,9 +30,13 @@ int showAllChannels = 0;
 
 int terminal_scale;
 
+int samplesThisSecond = 0;
+int lastTvUsec = 0;
+
 unsigned long thisSecond;
-unsigned long thisSample;
-unsigned long lastSecond=-1;
+int thisSample;
+int thisSampleRaw;
+unsigned long lastSecond = -1;
 unsigned long lastSample=-1;
 int storing = 0; // becomes 1 once we reach the first sample of a second, at which point we record the SFE
 int file_to_write = 0; // becomes 1 once file buffer has data
@@ -47,17 +54,12 @@ int interim_buffer_length = -1;
 
 float sy1, sy2, sy3, sy4, sy5, sx1, sx2, sx3, sx4, sx5 = 0; // sx1 = most recent sample in, sy1 = most recent filtered sample
 // coefficients for a 4 pole butterworth with 3dB cutoff @ 25Hz for 1000 samples per second (ADC raw speed)
-float c1 = 32011.292;
-float c2 = 114912.018;
-float c3 = -155295.607;
-float c4 = 93602.702;
-float c5 = -21223.822;
+float c1, c2, c3, c4, c5;
 
 void  Handler(int signo) {
     //System Exit
     printf("\r\nEND                  \r\n");
     DEV_ModuleExit();
-
     exit(0);
 }
 
@@ -68,8 +70,10 @@ void ReadingReadyISR() {
     int signedReading = (((int)reading + (FULLSCALE >> 1)) % FULLSCALE) - (FULLSCALE >> 1);
     if (filter) FilterSample(&signedReading);
     thisSecond = currentTime.tv_sec;
-    thisSample = ((currentTime.tv_usec - ADS1256_TIME_OFFSET )* SPS * 2 + 1) / 2000000; // work out which sample within a second this reading belongs to
-    if (thisSample>=SPS) { thisSample -= SPS; thisSecond += 1; } // reading rolls into a sample in next second
+    thisSample = (int)(((currentTime.tv_usec - config.adc_time_offset)/1000000.0 * config.sps)+0.5); // work out which sample within a second this reading belongs to
+    thisSampleRaw = thisSample;
+    if (thisSample < 0){ thisSample += config.sps; thisSecond -= 1;}  // reading rolls into a sample in next second
+    if (thisSample>=config.sps) { thisSample -= config.sps; thisSecond += 1; } // reading rolls into a sample in next second
     if (thisSample!=lastSample) {
         //printf("%d", readingsInThisSample);
         int averagedSample = 0;
@@ -83,6 +87,7 @@ void ReadingReadyISR() {
             averagedSample = 0;
         
         readingsInThisSample = 0;
+        samplesThisSecond++;
     }
     if (readingsInThisSample < MAX_READINGS_PER_SAMPLE) {
         readings[readingsInThisSample] = signedReading;
@@ -90,18 +95,22 @@ void ReadingReadyISR() {
         readingsInThisSample++;
     }
     if (thisSecond != lastSecond) {
-        //printf(": %d\r\n", lastSecond);
+        //printf("samples this second: %d %d %d %d %d %d %d\r\n", samplesThisSecond, thisSample, thisSampleRaw, thisSecond, lastSecond, currentTime.tv_usec, lastTvUsec);
+        samplesThisSecond = 0;
+
     }
     
     lastSecond = thisSecond;
     lastSample = thisSample;
+    lastTvUsec = currentTime.tv_usec;
 }
 
 void FilterSample(int *sample) {
     sx5 = sx4; sx4 = sx3; sx3 = sx2; sx2 = sx1;
     sy5 = sy4; sy4 = sy3; sy3 = sy2; sy2 = sy1;
     sx1 = (float)(*sample);
-    sy1 = (sx1 + 4 * sx2 + 6 * sx3 + 4 * sx4 + sx5 + c2 * sy2 + c3 * sy3 + c4 * sy4 + c5 * sy5) / c1;
+    sy1 = (sx1 + 4 * sx2 + 6 * sx3 + 4 * sx4 + sx5 + 
+        config.c2 * sy2 + config.c3 * sy3 + config.c4 * sy4 + config.c5 * sy5) / config.c1;
     *sample = (int)sy1;
 }
 
@@ -121,7 +130,7 @@ void dealWithSample(int sampleValue, unsigned int readingCount, int readings[], 
 		file_buffer_SFE=interim_buffer_SFE;
 		memset(interim_buffer,0,FILE_BUFFER_LENGTH * sizeof *interim_buffer);
 		interim_buffer_length=0;
-		interim_buffer_SFE=0;	
+		interim_buffer_SFE=thisSecond;	
 		file_to_write=1;
 	}
     if (display) {
@@ -134,7 +143,7 @@ void dealWithSample(int sampleValue, unsigned int readingCount, int readings[], 
 	    printf("|");
         for (int i = 0; i < TERMINAL_WIDTH-3; i++)
         {
-            if ((((min * DISPLAY_GAIN) + FULLSCALE/2) / terminal_scale <= i) && (((max * DISPLAY_GAIN) + FULLSCALE/2) / terminal_scale >= i))
+            if ((((min * config.display_gain) + FULLSCALE/2) / terminal_scale <= i) && (((max * config.display_gain) + FULLSCALE/2) / terminal_scale >= i))
                 printf("*");
             else
                 printf(" ");
@@ -167,48 +176,76 @@ void Write_File(void) {
 	char date_buf[40];
 	ptm = gmtime (&rawtime);
 	strftime(date_buf, 40, "%FT%T.000", ptm);
-    fprintf(outputfile,"TIMESERIES AU_LILH_0_HHZ, %u samples, %u sps, %s, SLIST, INTEGER, Counts\n", file_buffer_length, SPS, date_buf);
+    fprintf(outputfile,"TIMESERIES AU_LILH_0_HHZ, %u samples, %u sps, %s, SLIST, INTEGER, Counts\n", file_buffer_length, config.sps, date_buf);
 	for (int c=0;c<file_buffer_length;c++){
 		fprintf(outputfile,"%u\r\n", file_buffer[c]);
 	}
     fclose(outputfile);
     printf("wrote a file \r\n");
 }
+void parseConfig(void) {
+    FILE *configfile = fopen("config.ini", "r");
+    if (configfile == NULL) {
+        printf("Error opening the config ini or ftpconfig ini \n");
+        return 1;
+    }
+    char line[MAX_LINE_LENGTH];
+    while (fgets(line, sizeof(line), configfile) != NULL) {
+        if (line[0] == '#' || line[0] == '\n') continue;
+        // Tokenize the line based on '='
+        char *key = strtok(line, "=");
+        char *value = strtok(NULL, "=");
+        if (key != NULL && value != NULL) {
+            key[strcspn(key, " \t\r\n")] = '\0';
+            value[strcspn(value, " \t\r\n")] = '\0';
+            if (strcmp(key, "sps") == 0) config.sps = atoi(value);
+            else if (strcmp(key, "adc_time_offset") == 0) config.adc_time_offset = atoi(value);
+            else if (strcmp(key, "display_gain") == 0) config.display_gain = atoi(value);
+            else if (strcmp(key, "c1") == 0) config.c1 = atof(value);
+            else if (strcmp(key, "c2") == 0) config.c2 = atof(value);
+            else if (strcmp(key, "c3") == 0) config.c3 = atof(value);
+            else if (strcmp(key, "c4") == 0) config.c4 = atof(value);
+            else if (strcmp(key, "c5") == 0) config.c5 = atof(value);
+        }
+    }
+    fclose(configfile);
+}
 
 int main(int argc, char *argv[]) {
-
-    for (int j=0; j<argc; j++) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    printf("local time: %u\r\n",tv.tv_sec);
+    parseConfig();
+    for (int j = 0; j < argc; j++) {
         if (!strcmp(argv[j], "-v")) verbose = 1; // not used yet
         if (!strcmp(argv[j], "-f")) filter = 1;
         if (!strcmp(argv[j], "-d")) {
             display = 1;
-            if (j<argc-1) DISPLAY_GAIN = atoi(argv[j + 1]);
+            if (j<argc-1) config.display_gain = atoi(argv[j + 1]);
         };
         if (!strcmp(argv[j], "-a")) showAllChannels = 1;
-        if (!strcmp(argv[j], "-sps")) SPS = atoi(argv[j + 1]);
+        if (!strcmp(argv[j], "-sps")) config.sps = atoi(argv[j + 1]);
     }
-    if (!SPS) {
-        SPS = SPS_DEFAULT;
-        printf("(default)");
-    }
-    printf("-sps %d samples per second\r\n", SPS);
+
+    printf("-sps %d samples per second\r\n", config.sps);
     if (display) {
-        if (!DISPLAY_GAIN) {
-            DISPLAY_GAIN = DISPLAY_GAIN_DEFAULT;
-            printf("(default)");
-        }
-        printf("-d display gain %d\r\n", DISPLAY_GAIN);
+        printf("-d display gain %d\r\n", config.display_gain);
     } else {
         printf("no -d display\r\n");
+    }
+    if (filter) {
+        printf("-f filter on\r\n");
+    } else {
+        printf("no -f filter off\r\n");
     }
 
     struct winsize w;
     ioctl(0, TIOCGWINSZ, &w);
     TERMINAL_WIDTH = w.ws_col;
     terminal_scale = (FULLSCALE / (TERMINAL_WIDTH-3))-1;
-    printf("terminal width: %d", TERMINAL_WIDTH);
+    printf("terminal width: %d\r\n", TERMINAL_WIDTH);
 
-    sleep(3);
+    sleep(1);
     DEV_ModuleInit();
 
     // Exception handling:ctrl + c
