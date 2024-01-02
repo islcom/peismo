@@ -25,10 +25,9 @@ while True:
     dt = datetime.utcfromtimestamp(u)
     fn1 = "mseed/" + dt.strftime("%Y-%m-%d_%H%M") + mseedsuffix_value + ".mseed"
 
-    pack_command_string = ('../ascii2mseed-1.4/ascii2mseed ' + file_list_string + '-o ' + fn1)
+    pack_command_string = ('~/ascii2mseed/ascii2mseed ' + file_list_string + '-o ' + fn1)
     rm_command_string = ('rm -f ' + file_list_string)
     chmod_command_string = ('chmod 666 ' + fn1)
-    #command_string = ('../ascii2mseed-1.4/ascii2mseed data/*.dat -o ' + fn1)
 
     #print('Pack Command String: ' + pack_command_string)
     #print('rm Command String: ' + rm_command_string)
