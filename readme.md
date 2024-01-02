@@ -73,11 +73,20 @@ sudo systemctl restart chrony
 ```bash
 chronyc sources
 ```
+### Install miniseed conversion utility
+```bash
+cd ~
+git clone https://github.com/iris-edu/ascii2mseed
+cd ascii2mseed
+make
+```
 
 ### Copy this repository
 ```bash
+cd ~
 git clone https://github.com/colinlove/peismo
 cd peismo
+make
 ```
 
 You'll need to copy ftpconfig.ini.template to ftpconfig.ini and update ftp/sftp credentials and station name
