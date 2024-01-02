@@ -75,7 +75,10 @@ chronyc sources
 ```
 
 ### Copy this repository
-git something something
+```bash
+git clone https://github.com/colinlove/peismo
+cd peismo
+```
 
 You'll need to copy ftpconfig.ini.template to ftpconfig.ini and update ftp/sftp credentials and station name
 ```bash
@@ -85,7 +88,7 @@ nano ftpconfig.ini
 
 ### Modify the Cron Schedule
 ```bash
-crotab -e
+crontab -e
 ```
 insert
 ```bash
