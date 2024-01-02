@@ -17,3 +17,6 @@ uploaded
 
 #ignore logs
 *.log
+
+#ignore executable
+peismo
