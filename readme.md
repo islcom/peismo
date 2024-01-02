@@ -97,5 +97,5 @@ crontab -e
 ```
 insert
 ```bash
-*/5 * * * * cd /home/pi/peismo && python peismoadmin.py; python mseed.py; python ftpupload.py
+*/5 * * * * cd ~/peismo && python peismoadmin.py; python mseed.py; python ftpupload.py
 ```
