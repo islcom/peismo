@@ -1,6 +1,15 @@
 # Peismo
 Seismograph based on Raspberry Pi (tested with pi2 and pi3), a A/D Expansion board by waveshare https://www.waveshare.com/high-precision-ad-da-board.htm and any GPS with PPS output https://www.adafruit.com/product/2324
 ## Installation
+### Waveshare Board Setup
+Add jumper to connect AINCOM to AGND
+
+Add jumper to connect VCC to 5V
+
+Other jumpers can be omitted
+
+Connect sensor between AD0 and AD1 and connect any shield to GND (if isolated from the sensor)
+
 ### Get the latest img from RaspberryPi.org
 Use the official Raspberry Pi Imager from https://www.raspberrypi.com/software/
 
