@@ -88,7 +88,6 @@ make
 cd ~
 git clone https://github.com/colinlove/peismo
 cd peismo
-mkdir data
 make
 ```
 
