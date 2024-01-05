@@ -124,7 +124,8 @@ static const uint8_t ADS1256_DRATE_E[ADS1256_DRATE_MAX] =
 	0x03
 };
 
-
+void ADS1256_WriteCmd(UBYTE Cmd);
+void ADS1256_SetDiffChannal(UBYTE Channal);
 void ADS1256_reset(void);
 UBYTE ADS1256_init(void);
 void ADS1256_SetMode(UBYTE Mode);
