@@ -16,7 +16,9 @@ password = config.get('sftp', 'password', fallback='')
 server = config.get('sftp', 'server', fallback='')
 path = config.get('sftp', 'path', fallback='')
 
-sftp = pysftp.Connection(host=server, username=username, password=password)
+cnopts = pysftp.CnOpts()
+cnopts.hostkeys = None
+sftp = pysftp.Connection(host=server, username=username, password=password, cnopts=cnopts)
 sftp.chdir(path)
 for file in files:
     source_path = os.path.join(source_folder, file)
