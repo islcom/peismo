@@ -39,7 +39,11 @@ sudo raspi-config
 ```
 Interface options -> Serial Port ->
 Would you like a login shell to be available over serial -> No. ->
-Would you like the serial port hardware to be enabled -> Yes. Reboot
+Would you like the serial port hardware to be enabled -> Yes
+
+Interface options -> SPI -> Enable
+
+Reboot
 
 ```bash
 sudo nano /etc/default/gpsd
