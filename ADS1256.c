@@ -234,7 +234,8 @@ UDOUBLE ADS1256_Faster_Read_ADC_Data(void) // was static
     DEV_Digital_Write(DEV_CS_PIN, 0);
     //DEV_SPI_WriteByte(CMD_RDATA);
     //DEV_Digital_Write(DEV_CS_PIN, 0); // just for the sake of wasting time. need 7.6uS between CMD Write and data read
-    int read_data = wiringPiSPIDataRW(0, &read, 3);
+    int read_data = wiringPiSPIDataRW(0,(unsigned char*)&read, 3);
+    (void)read_data; // don't need to use
     DEV_Digital_Write(DEV_CS_PIN, 1);
     read = ((read & 0x0000FF) << 16) |
         ((read & 0x00FF00) << 0) |
