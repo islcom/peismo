@@ -97,6 +97,7 @@ cp ftpconfig.ini.template ftpconfig.ini
 nano ftpconfig.ini
 ```
 ### Add SFTP support to Python
+This step seems a bit flaky and may need to be retried if it fails at first.
 ```bash
 pip install pysftp
 ```
