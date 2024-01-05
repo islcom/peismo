@@ -35,7 +35,7 @@ sudo bash -c "echo 'pps-gpio' >> /etc/modules"
 sudo reboot
 ```
 ```bash
-raspi-config
+sudo raspi-config
 ```
 Interface options -> Serial Port ->
 Would you like a login shell to be available over serial -> No. ->
