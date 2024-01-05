@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>  // get terminal width
 #include <sys/time.h>
 #include <pthread.h>
-
+#include <unistd.h>
 #include "ADS1256.h"
 
 #define FILE_BUFFER_LENGTH 120000 // 60 x sps needed for a minute, 120 x sps allows for arbitrary start and finish on minute with no files less than a minute
@@ -21,6 +21,7 @@ typedef struct Config{
     float c1, c2, c3, c4, c5;
 } Config;
 Config config;
+char station_name[MAX_LINE_LENGTH];
 int TERMINAL_WIDTH = 0;
 
 int verbose = 0; // not used yet
@@ -55,6 +56,11 @@ int interim_buffer_length = -1;
 float sy1, sy2, sy3, sy4, sy5, sx1, sx2, sx3, sx4, sx5 = 0; // sx1 = most recent sample in, sy1 = most recent filtered sample
 // coefficients for a 4 pole butterworth with 3dB cutoff @ 25Hz for 1000 samples per second (ADC raw speed)
 float c1, c2, c3, c4, c5;
+
+// function prototypes
+UDOUBLE ADS1256_Faster_Read_ADC_Data(void);
+void FilterSample(int *sample);
+void dealWithSample(int sampleValue, unsigned int readingCount, int readings[], int rawReadings[]);
 
 void  Handler(int signo) {
     //System Exit
@@ -176,7 +182,7 @@ void Write_File(void) {
 	char date_buf[40];
 	ptm = gmtime (&rawtime);
 	strftime(date_buf, 40, "%FT%T.000", ptm);
-    fprintf(outputfile,"TIMESERIES AU_LILH_0_HHZ, %u samples, %u sps, %s, SLIST, INTEGER, Counts\n", file_buffer_length, config.sps, date_buf);
+        fprintf(outputfile,"TIMESERIES %s, %u samples, %u sps, %s, SLIST, INTEGER, Counts\n", station_name, file_buffer_length, config.sps, date_buf);
 	for (int c=0;c<file_buffer_length;c++){
 		fprintf(outputfile,"%u\r\n", file_buffer[c]);
 	}
@@ -185,9 +191,10 @@ void Write_File(void) {
 }
 void parseConfig(void) {
     FILE *configfile = fopen("config.ini", "r");
-    if (configfile == NULL) {
+    FILE *ftpconfigfile = fopen("ftpconfig.ini", "r");
+    if ((configfile == NULL)|| (ftpconfigfile == NULL)) {
         printf("Error opening the config ini or ftpconfig ini \n");
-        return 1;
+        return;
     }
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), configfile) != NULL) {
@@ -208,13 +215,25 @@ void parseConfig(void) {
             else if (strcmp(key, "c5") == 0) config.c5 = atof(value);
         }
     }
+    while (fgets(line, sizeof(line), ftpconfigfile) != NULL) {
+        if (line[0] == '#' || line[0] == '\n') continue;
+        // Tokenize the line based on '='
+        char *key = strtok(line, "=");
+        char *value = strtok(NULL, "=");
+        if (key != NULL && value != NULL) {
+            key[strcspn(key, " \t\r\n")] = '\0';
+            value[strcspn(value, " \t\r\n")] = '\0';
+            if (strcmp(key, "stationname") == 0) strcpy(station_name, value);
+        }
+    }
     fclose(configfile);
+    fclose(ftpconfigfile);
 }
 
 int main(int argc, char *argv[]) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
-    printf("local time: %u\r\n",tv.tv_sec);
+    printf("local time: %lu\r\n",tv.tv_sec);
     parseConfig();
     for (int j = 0; j < argc; j++) {
         if (!strcmp(argv[j], "-v")) verbose = 1; // not used yet
