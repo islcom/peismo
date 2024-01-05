@@ -12,7 +12,7 @@ while True:
     unsorted_files = glob.glob("data/*.dat")
     files = sorted(unsorted_files)
     if len(files)==0:
-        print("No files")
+        print("No more files")
         sys.exit()
     print("Number of dat files: " + str(len(files)))
     file_list_string = ""
