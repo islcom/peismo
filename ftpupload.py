@@ -29,3 +29,11 @@ for file in files:
     shutil.move(source_path, destination_path)
     print(source_path + " -> " + destination_path)
 sftp.close()
+current_date = datetime.now()
+for filename in os.listdir(destination_folder):
+    filepath = os.path.join(destination_folder, filename)
+    modification_time = datetime.fromtimestamp(os.path.getmtime(filepath))
+    age_of_file = current_date - modification_time
+    if age_of_file.days > 90:
+        os.remove(filepath)
+        print(f"Deleted: {filename}")
