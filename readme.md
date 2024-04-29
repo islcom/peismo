@@ -113,3 +113,9 @@ insert
 ```bash
 */5 * * * * cd ~/peismo && python peismoadmin.py; python mseed.py; python ftpupload.py
 ```
+### Install Apache2 Web Server (for display of local seismograms)
+```bash
+sudo apt install apache2 php libapache2-mod-php -y
+sudo ln -s ~/peismo/www/ /var/www/html/peismo
+
+```
