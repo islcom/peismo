@@ -119,3 +119,7 @@ sudo apt install apache2 php libapache2-mod-php -y
 sudo ln -s ~/peismo/www/ /var/www/html/peismo
 
 ```
+### Install Samba File Sharing
+```bash
+sudo apt install samba samba-common-bin smbclient cifs-utils
+```
