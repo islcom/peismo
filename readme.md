@@ -22,7 +22,7 @@ Boot to CLI instead of desktop
 (In Advanced) Enable SSH if you want to do the rest of this from a remote console
 
 ### The following instructions come from this tutorial: https://austinsnerdythings.com/2021/04/19/microsecond-accurate-ntp-with-a-raspberry-pi-and-pps-gps/ (except our pps signal is gpio4 instead of 18)
-
+(config.txt is now located in /boot/firmware/config.txt)
 ```bash
 sudo apt update
 sudo apt upgrade
@@ -123,3 +123,4 @@ sudo ln -s ~/peismo/www/ /var/www/html/peismo
 ```bash
 sudo apt install samba samba-common-bin smbclient cifs-utils
 ```
+
