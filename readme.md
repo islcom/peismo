@@ -117,6 +117,8 @@ insert
 ```bash
 sudo apt install apache2 php libapache2-mod-php -y
 sudo ln -s ~/peismo/www/ /var/www/html/peismo
+cd ~/peismo/www/
+sudo ln -s ~/peismo/uploaded/ uploaded
 
 ```
 ### Install Samba File Sharing
@@ -124,5 +126,41 @@ sudo ln -s ~/peismo/www/ /var/www/html/peismo
 sudo apt install samba samba-common-bin smbclient cifs-utils
 sudo smbpasswd -a <user>
 ```
+Edit /etc/samba/smb.conf
+```bash
+#   create mask = 0700
+#   directory mask = 0700
+[peismo]
+        path = /home/<user>/peismo/
+        writeable = yes
+        browseable = yes
+        read only = no
+        guest ok = yes
+        comment = peismo
+        force directory mode = 2770
+        wins support = yes
+```
+Then restart smb
+```bash
+sudo systemctl restart smb
+```
+To access peismo from windows,create a desktop shortcut pointing to hostname or ipaddress of the peismo.
+On the latest WIN11 you may get a message "You can't access this shared folder because........".
+If so open a command prompt as Administrator and run these,
+```bash
+Set-SmbClientConfiguration -EnableInsecureGuestLogons $true -Force
+
+Set-SmbClientConfiguration -RequireSecuritySignature $false -Force
+
+Set-SmbServerConfiguration -RequireSecuritySignature $false -Force
+``` 
+
+### Install Avahi Daemon (so that your remote clients are able to find your peismo)
+```bash
+sudo apt-get install avahi-daemon
+```
+After installing avahi-daemon edit "/etc/avahi/avahi-daemon.conf" and delete "#" in the line:
+
+enable-dbus=yes
 
 
